@@ -10,6 +10,18 @@ board = [
     [0, 4, 9, 2, 0, 6, 0, 0, 7]
 ]
 
+board2 = [
+    [5, 0, 1, 0, 0, 0, 6, 0, 4],
+    [0, 9, 0, 3, 0, 6, 0, 5, 0],
+    [0, 0, 0, 0, 9, 0, 0, 0, 0],
+    [4, 0, 0, 0, 0, 0, 0, 0, 9],
+    [0, 0, 0, 1, 0, 9, 0, 0, 0],
+    [7, 0, 0, 0, 0, 0, 0, 0, 6],
+    [0, 0, 0, 0, 2, 0, 0, 0, 0],
+    [0, 8, 0, 5, 0, 7, 0, 6, 0],
+    [1, 0, 3, 0, 0, 0, 7, 0, 2]
+]
+
 
 def solve(bo):
     find = find_empty(bo)
@@ -77,7 +89,7 @@ def find_empty(bo):
     return None
 
 
-print_board(board)
-solve(board)
-print("___________________")
-print_board(board)
+print_board(board2)
+solve(board2)
+print('\n\n')
+print_board(board2)

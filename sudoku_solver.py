@@ -1,7 +1,4 @@
-import sys
 import pandas as pd
-
-sys.setrecursionlimit(1000)
 
 
 class Sudoku():
@@ -17,11 +14,10 @@ class Sudoku():
                     str, path of the file'''
 
         if path.endswith('.xlsx'):
-            self.grid = pd.read_excel(path, dtype='Int64', header=None)
+            self.grid = pd.read_excel(
+                path, dtype='Int64', header=None).fillna(0)
         elif path.endswith('.csv'):
-            self.grid = pd.read_csv(
-                path, dtype='Int64', header=None, na_values='0'
-            )
+            self.grid = pd.read_csv(path, dtype='Int64', header=None)
         else:
             print('Incorrect path')
 
@@ -36,7 +32,8 @@ class Sudoku():
                     grid += '| '
 
                 value = self.grid.loc[i, j]
-                value = str(value) if pd.isna(value) is False else '-'
+                # value = str(value) if pd.isna(value) is False else '-'
+                value = '-' if value == 0 else str(value)
                 grid += value + ('\n' if j == 8 else ' ')
 
         return grid
@@ -51,18 +48,16 @@ class Sudoku():
 
         # row:
         for i in range(self.grid.shape[1]):
-            if i != position[0] & (
-                    (self.grid.loc[position[0], i] == number) is True):
+            if self.grid.loc[position[0], i] == number and i != position[1]:
                 return False
         # column:
         for i in range(self.grid.shape[0]):
-            if i != position[1] & (
-                    (self.grid.loc[i, position[1]] == number) is True):
+            if self.grid.loc[i, position[1]] == number and i != position[0]:
                 return False
         # subgrid:
         subgrid = self.subgrid(position).copy()
-        subgrid.loc[position[0], position[1]] = '0'
-        if pd.DataFrame([number]).isin(subgrid).loc[0, 0]:
+        subgrid.loc[position[0], position[1]] = 0
+        if subgrid.isin([number]).any().any():
             return False
 
         return True
@@ -83,7 +78,7 @@ class Sudoku():
 
         for row in range(self.grid.shape[0]):
             for column in range(self.grid.shape[1]):
-                if pd.isna(self.grid.loc[row, column]):
+                if self.grid.loc[row, column] == 0:
                     return (row, column)
 
     def solve(self, save_path=None):
@@ -104,10 +99,10 @@ class Sudoku():
             if self.number_is_valid(number, empty_box_position):
                 self.grid.loc[row, column] = number
 
-            if self.solve():
-                return True
+                if self.solve():
+                    return True
 
-            self.grid.loc[row, column] = 0
+                self.grid.loc[row, column] = 0
 
         return False
 
@@ -116,6 +111,6 @@ sudoku1 = Sudoku('sudoku1.xlsx')
 sudoku2 = Sudoku('sudoku2.xlsx')
 sudoku3 = Sudoku('sudoku3.csv')
 
-print(sudoku3)
-sudoku3.solve()
-print(sudoku3)
+print(sudoku1)
+sudoku1.solve()
+print(sudoku1)
