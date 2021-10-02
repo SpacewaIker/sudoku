@@ -1,128 +1,116 @@
 import pandas as pd
 
-def get_subgrid(sudoku, col, row): #Finds and returns the subgrid in which the box is in.
-    '''Finds and returns the subgrid in which the box is in.
-    ARGS- sudoku: sudoku problem as a pandas DataFrame
-        col: column of the box
-        row: row of the box'''
 
-    if col in range(3):
-        subgrid = sudoku.loc[:, 0:2]
-    elif col in range(3, 6):
-        subgrid = sudoku.loc[:, 3:5]
-    elif col in range(6, 9):
-        subgrid = sudoku.loc[:, 6:8]
+class Sudoku():
+    ''' Sudoku problem as pandas DataFrame.
+        Methods:
+            solve:
+                solves the sudoku problem'''
 
-    if row in range(3):
-        subgrid = subgrid.loc[0:2, :]
-    elif row in range(3, 6):
-        subgrid = subgrid.loc[3:5, :]
-    elif row in range(6, 9):
-        subgrid = subgrid.loc[6:8, :]
+    def __init__(self, path):
+        ''' Stores the sudoku problem as self.grid
+            A&P:
+                path:
+                    str, path of the file'''
 
-    return subgrid
+        if path.endswith('.xlsx'):
+            self.grid = pd.read_excel(
+                path, dtype='Int64', header=None).fillna(0)
+        elif path.endswith('.csv'):
+            self.grid = pd.read_csv(path, dtype='Int64', header=None)
+        else:
+            print('Incorrect path')
 
-def find_possible_numbers(sudoku, col, row): #Finds and returns the possible numbers for a box of a sudoku.
-    '''Finds and returns the possible numbers for a box of a sudoku.
-    ARGS- sudoku: sudoku problem as a pandas DataFrame
-        col: column of the box
-        row: row of the box'''
-    
-    possible_numbers = []
+    def __str__(self):
+        grid = ''
+        for i in range(self.grid.shape[0]):
+            if i % 3 == 0 and i != 0:
+                grid += '------|-------|------\n'
 
-    for i in range(1, 10):
-        number_is_possible = True
+            for j in range(self.grid.shape[1]):
+                if j % 3 == 0 and j != 0:
+                    grid += '| '
 
-        while number_is_possible: 
-            # allow to exit loop directly if a condition is not met
+                value = self.grid.loc[i, j]
+                # value = str(value) if pd.isna(value) is False else '-'
+                value = '-' if value == 0 else str(value)
+                grid += value + ('\n' if j == 8 else ' ')
 
-            # check row
-            if sudoku.loc[row, :].isin([i]).any():
-                number_is_possible = False
+        return grid
 
-            # check column
-            if sudoku.loc[:, col].isin([i]).any():
-                number_is_possible = False
+    def number_is_valid(self, number, position):
+        ''' Checks whether a certain number is possible at a certain position
+            A&P:
+                number:
+                    int, number to check
+                position:
+                    tuple of 2 int, row and column of the number'''
 
-            # check subgrid
-            subgrid = get_subgrid(sudoku, col, row)
-            if subgrid.isin([i]).any().any():
-                number_is_possible = False
+        # row:
+        for i in range(self.grid.shape[1]):
+            if self.grid.loc[position[0], i] == number and i != position[1]:
+                return False
+        # column:
+        for i in range(self.grid.shape[0]):
+            if self.grid.loc[i, position[1]] == number and i != position[0]:
+                return False
+        # subgrid:
+        subgrid = self.subgrid(position).copy()
+        subgrid.loc[position[0], position[1]] = 0
+        if subgrid.isin([number]).any().any():
+            return False
 
-            break
+        return True
 
-        if number_is_possible:
-            possible_numbers.append(i)
-    
-    return possible_numbers
+    def subgrid(self, position):
+        ''' Returns the subgrid at a certain position
+            A&P:
+                position:
+                    tuple of 2 int, row and column'''
 
-def solve_iterate(sudoku): #Function to fill in sudoku boxes by using iteration.
-    '''Function to fill in sudoku boxes by using iteration. 
-    Not suitable for more complex sudokus.
-    If it iterates twice through the hole sudoku without filling in it will stop iterating and return 
-    the sudoku
-    ARGS- sudoku: sudoku problem as a pandas DataFrame'''
+        x = position[0] // 3
+        y = position[1] // 3
 
-    iter_wo_fill = 0 #iterations without being able to fill in something
+        return self.grid.loc[x*3:x*3 + 2, y*3:y*3 + 2]
 
-    while (sudoku.isnull().any().any()) and (iter_wo_fill < 2): 
-        #while sudoku is not completely full 
-        # and there hasn't been 2 full iterations without filling in a box
+    def find_empty_box(self):
+        ''' Finds an empty box in the sudoku'''
 
-        filled_st = False #was something filled in this whole iteration?
+        for row in range(self.grid.shape[0]):
+            for column in range(self.grid.shape[1]):
+                if self.grid.loc[row, column] == 0:
+                    return (row, column)
 
-        for current_col in range(9):
-            for current_row in range(9):
-                if pd.isna(sudoku.loc[current_row, current_col]): #checks that the box is not already filled
+    def solve(self, save_path=None):
+        ''' Solves the sudoku
+            A&P:
+                save_path:
+                    str, path to save the sudoku
+                    if None, sudoku will not be saved'''
 
-                    possible_numbers = find_possible_numbers(sudoku, current_col, current_row)
+        empty_box_position = self.find_empty_box()
 
-                    if len(possible_numbers) == 1: #checks that there's only one option possible
-                        sudoku.loc[current_row, current_col] = possible_numbers[0]
-                        if filled_st == False: filled_st = True #something *was* filled in this whole iteration
-                        iter_wo_fill = 0 #resets iterations without filling counter
+        if empty_box_position is None:
+            return True
+        else:
+            row, column = empty_box_position
 
-                    
-                    elif len(possible_numbers) == 0: #error
-                        print('Error: len(possible_numbers) == 0. \n Col: {0} \n Row: {1}\n'.format(
-                            current_col, current_row
-                        ))
+        for number in range(1, 10):
+            if self.number_is_valid(number, empty_box_position):
+                self.grid.loc[row, column] = number
 
-        if filled_st == False: #nothing was filled during this whole iteration
-            iter_wo_fill += 1 
+                if self.solve():
+                    return True
 
-    return sudoku
+                self.grid.loc[row, column] = 0
 
-def solve_sudoku(sudoku, savefile=None): #Solves a sudoku problem.
-    '''Solves a sudoku problem.
-    ARGS- sudoku: sudoku problem as a pandas DataFrame, 
-        savefile: if not None, name of the file saved'''
+        return False
 
-    sudoku_solve_iterate = solve_iterate(sudoku)
-    if sudoku_solve_iterate.isnull().any().any() == True:
-        print('Not full')
-        #proceed with other type of filling
 
-    else: #sudoku is filled with only iteration
-        sudoku = sudoku_solve_iterate
+sudoku1 = Sudoku('sudoku1.xlsx')
+sudoku2 = Sudoku('sudoku2.xlsx')
+sudoku3 = Sudoku('sudoku3.csv')
 
-    if savefile != None:
-        sudoku.to_csv('projects\sudoku\{}.csv'.format(str(savefile)), header=False, index=False)
-
-    return sudoku
-
-sudoku1 = pd.read_excel(
-    'projects\sudoku\sudoku1.xlsx',
-    dtype='Int64',
-    header=None
-)
-
-sudoku2 = pd.read_excel(
-    'projects\sudoku\sudoku2.xlsx',
-    dtype='Int64',
-    header=None
-)
-
-print(
-    solve_sudoku(sudoku1)
-)
+print(sudoku1)
+sudoku1.solve()
+print(sudoku1)
